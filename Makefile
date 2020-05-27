@@ -99,7 +99,7 @@ CONFIG_RTW_SDIO_PM_KEEP_POWER = y
 ###################### MP HW TX MODE FOR VHT #######################
 CONFIG_MP_VHT_HW_TX_MODE = y
 ###################### Platform Related #######################
-CONFIG_PLATFORM_I386_PC = y
+CONFIG_PLATFORM_I386_PC = n
 CONFIG_PLATFORM_ANDROID_ARM64 = n
 CONFIG_PLATFORM_ARM_RPI = n
 CONFIG_PLATFORM_ARM64_RPI = n
@@ -1198,6 +1198,43 @@ EXTRA_CFLAGS += -DCONFIG_RTW_UP_MAPPING_RULE=0
 endif
 
 EXTRA_CFLAGS += -DDM_ODM_SUPPORT_TYPE=0x04
+
+# { FriendlyARM boards support
+ifeq ($(CONFIG_VENDOR_FRIENDLYARM), y)
+MODULE_NAME = rtl8812au
+USER_MODULE_NAME = $(MODULE_NAME)
+
+ifeq ($(KERNELRELEASE),)
+$(info ********************************************************************************)
+$(info *  Building module - $(MODULE_NAME).ko for FriendlyARM boards)
+endif
+
+EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
+EXTRA_CFLAGS += -DCONFIG_IOCTL_CFG80211 -DRTW_USE_CFG80211_STA_EVENT
+
+ARCH ?= arm64
+CROSS_COMPILE ?= aarch64-linux-
+KSRC ?= /opt/FriendlyARM/build/linux-4.4.y
+KLIB ?= /tmp/wireless-modules
+INSTALL_PREFIX :=
+
+ifeq ($(CONFIG_PLATFORM_ANDROID), y)
+ifeq ($(KERNELRELEASE),)
+$(info *  Building driver with Android support)
+endif
+EXTRA_CFLAGS += -DCONFIG_CONCURRENT_MODE
+EXTRA_CFLAGS += -DCONFIG_PLATFORM_ANDROID
+EXTRA_CFLAGS += -DRTW_ENABLE_WIFI_CONTROL_FUNC -DCONFIG_RADIO_WORK
+endif
+
+ifeq ($(KERNELRELEASE),)
+$(info *)
+$(info *    Kernel TOP-Dir: $(KSRC) )
+$(info *)
+$(info *  Copyright 2020 FriendlyELEC (http://www.friendlyarm.com/))
+$(info ********************************************************************************)
+endif
+endif # END of VENDOR_FRIENDLYARM }
 
 ifeq ($(CONFIG_PLATFORM_I386_PC), y)
 EXTRA_CFLAGS += -DCONFIG_LITTLE_ENDIAN
