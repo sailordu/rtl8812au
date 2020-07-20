@@ -22,8 +22,8 @@ EXTRA_LDFLAGS += --strip-all -O3
 
 ########################## WIFI IC ############################
 CONFIG_RTL8812A = y
-CONFIG_RTL8821A = y
-CONFIG_RTL8814A = y
+CONFIG_RTL8821A = n
+CONFIG_RTL8814A = n
 ######################### Interface ###########################
 CONFIG_USB_HCI = y
 ########################### Android ###########################
@@ -92,7 +92,7 @@ CONFIG_RTW_SDIO_PM_KEEP_POWER = y
 ###################### MP HW TX MODE FOR VHT #######################
 CONFIG_MP_VHT_HW_TX_MODE = n
 ###################### Platform Related #######################
-CONFIG_PLATFORM_I386_PC = y
+CONFIG_PLATFORM_I386_PC = n
 CONFIG_PLATFORM_ANDROID_ARM64 = n
 CONFIG_PLATFORM_ARM_RPI = n
 CONFIG_PLATFORM_ARM64_RPI = n
