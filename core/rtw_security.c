@@ -178,29 +178,29 @@ static u8 crc32_reverseBit(u8 data)
 
 static void crc32_init(void)
 {
+	int i, j;
+	u32 c;
+	u8 *p = (u8 *)&c, *p1;
+	u8 k;
+
 	if (bcrc32initialized == 1)
 		goto exit;
-	else {
-		sint i, j;
-		u32 c;
-		u8 *p = (u8 *)&c, *p1;
-		u8 k;
 
-		c = 0x12340000;
+	c = 0x12340000;
 
-		for (i = 0; i < 256; ++i) {
-			k = crc32_reverseBit((u8)i);
-			for (c = ((u32)k) << 24, j = 8; j > 0; --j)
-				c = c & 0x80000000 ? (c << 1) ^ CRC32_POLY : (c << 1);
-			p1 = (u8 *)&crc32_table[i];
+	for (i = 0; i < 256; ++i) {
+		k = crc32_reverseBit((u8)i);
+		for (c = ((u32)k) << 24, j = 8; j > 0; --j)
+			c = c & 0x80000000 ? (c << 1) ^ CRC32_POLY : (c << 1);
+		p1 = (u8 *)&crc32_table[i];
 
-			p1[0] = crc32_reverseBit(p[3]);
-			p1[1] = crc32_reverseBit(p[2]);
-			p1[2] = crc32_reverseBit(p[1]);
-			p1[3] = crc32_reverseBit(p[0]);
-		}
-		bcrc32initialized = 1;
+		p1[0] = crc32_reverseBit(p[3]);
+		p1[1] = crc32_reverseBit(p[2]);
+		p1[2] = crc32_reverseBit(p[1]);
+		p1[3] = crc32_reverseBit(p[0]);
 	}
+	bcrc32initialized = 1;
+
 exit:
 	return;
 }
@@ -218,7 +218,6 @@ static u32 getcrc32(u8 *buf, sint len)
 		crc = crc32_table[(crc ^ *p) & 0xff] ^ (crc >> 8);
 	return ~crc;    /* transmit complement, per CRC-32 spec */
 }
-
 
 /*
 	Need to consider the fragment  situation
@@ -239,7 +238,6 @@ void rtw_wep_encrypt(_adapter *padapter, u8 *pxmitframe)
 	struct	pkt_attrib	*pattrib = &((struct xmit_frame *)pxmitframe)->attrib;
 	struct	security_priv	*psecuritypriv = &padapter->securitypriv;
 	struct	xmit_priv		*pxmitpriv = &padapter->xmitpriv;
-
 
 
 	if (((struct xmit_frame *)pxmitframe)->buf_addr == NULL)
@@ -2132,6 +2130,7 @@ BIP_exit:
 
 #ifndef PLATFORM_FREEBSD
 #if defined(CONFIG_TDLS)
+
 static u8 os_strlen(const char *s)
 {
 	const char *p = s;
@@ -2162,6 +2161,19 @@ static int os_memcmp(const void *s1, const void *s2, u8 n)
 #endif
 
 #endif /* PLATFORM_FREEBSD */
+/**
+ * sha256_prf - SHA256-based Pseudo-Random Function (IEEE 802.11r, 8.5.1.5.2)
+ * @key: Key for PRF
+ * @key_len: Length of the key in bytes
+ * @label: A unique label for each purpose of the PRF
+ * @data: Extra data to bind into the key
+ * @data_len: Length of the data
+ * @buf: Buffer for the generated pseudo-random key
+ * @buf_len: Number of bytes of key to generate
+ *
+ * This function is used to derive new, cryptographically separate keys from a
+ * given key.
+ */
 
 /* AES tables*/
 const u32 Te0[256] = {
@@ -2785,7 +2797,7 @@ int aes_siv_decrypt(const u8 *key, const u8 *iv_crypt, size_t iv_c_len,
 #endif /* CONFIG_RTW_MESH_AEK */
 
 #ifdef CONFIG_TDLS
-void wpa_tdls_generate_tpk(_adapter *padapter, void *sta)
+void wpa_tdls_generate_tpk(_adapter *padapter, PVOID sta)
 {
 	struct sta_info *psta = (struct sta_info *)sta;
 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;

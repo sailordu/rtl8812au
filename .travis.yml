@@ -4,9 +4,9 @@ dist: bionic
 os: linux
 
 before_install:
-  - export KERNEL_URL_DETAILS=$(wget --quiet -O - ${KERNEL_URL}v${KVER}/ | grep -A8 'Build for amd64')
+  - export KERNEL_URL_DETAILS=$(wget --quiet -O - ${KERNEL_URL}v${KVER}/ | grep -A8 'Build for amd64\|Test amd64')
   - export ALL_DEB=$(echo "$KERNEL_URL_DETAILS" |  grep -m1 'all.deb' | cut -d '"' -f 2)
-  - export KVER_BUILD=$(echo $ALL_DEB | cut -d '_' -f 1 | cut -c15-)
+  - export KVER_BUILD=$(echo $ALL_DEB | cut -d '_' -f 2 | rev | cut -c14- | rev)
   - wget ${KERNEL_URL}v${KVER}/$(echo "$KERNEL_URL_DETAILS" | grep -m1 'amd64.deb' | cut -d '"' -f 2)
   - wget ${KERNEL_URL}v${KVER}/$ALL_DEB
   - sudo dpkg -i *.deb
@@ -33,6 +33,11 @@ jobs:
           sources:
             - sourceline: "ppa:ubuntu-toolchain-r/test"
           packages:
+	    - gcc-10
+      env: COMPILER=gcc-10 KVER=$(curl -s https://www.kernel.org/releases.json | grep 'mainline' -B1 | head -1 | cut -d'"' -f4)
+    - addons:
+        apt:
+          packages:
             - gcc-9
       env: COMPILER=gcc-9 KVER=$(curl -s https://www.kernel.org/releases.json | grep 'mainline' -B1 | head -1 | cut -d'"' -f4)
     - addons:
@@ -43,7 +48,6 @@ jobs:
 
     - env: COMPILER=gcc-7 KVER=$(curl -s https://www.kernel.org/releases.json | grep 'mainline' -B1 | head -1 | cut -d'"' -f4)
     - env: COMPILER=gcc-7 KVER=$(curl -s https://www.kernel.org/releases.json | grep -A1 'latest_stable' | tail -1 | cut -d'"' -f4)
-    - env: COMPILER=gcc-7 KVER=5.5.18
  #Kernels 5.4 with minor versions > 28 are failing on amd64. Not upgrade the minor version without check https://kernel.ubuntu.com/~kernel-ppa/mainline/
     - env: COMPILER=gcc-7 KVER=5.4.28
     - env: COMPILER=gcc-7 KVER=4.19.116
