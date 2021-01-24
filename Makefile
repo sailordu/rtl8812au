@@ -23,7 +23,7 @@ EXTRA_LDFLAGS += --strip-all -O3
 ########################## WIFI IC ############################
 CONFIG_RTL8812A = y
 CONFIG_RTL8821A = y
-CONFIG_RTL8814A = y
+CONFIG_RTL8814A = n
 ######################### Interface ###########################
 CONFIG_USB_HCI = y
 ########################### Android ###########################
@@ -178,7 +178,7 @@ ifeq ($(CONFIG_USB_HCI), y)
 HCI_NAME = usb
 endif
 
-ifeq ($(CONFIG_RTL8812A)_$(CONFIG_RTL8821A)_$(CONFIG_RTL8814A), y_y_y)
+ifeq ($(CONFIG_RTL8812A)_$(CONFIG_RTL8821A)_$(CONFIG_RTL8814A), y_y_n)
 
 EXTRA_CFLAGS += -DDRV_NAME=\"rtl88XXau\"
 ifeq ($(CONFIG_USB_HCI), y)
@@ -457,7 +457,7 @@ ifeq ($(CONFIG_RTL8814A), y)
 #EXTRA_CFLAGS += -DCONFIG_MP_VHT_HW_TX_MODE
 CONFIG_MP_VHT_HW_TX_MODE = n
 ##########################################
-RTL871X = rtl8814a
+#RTL871X = rtl8814a
 ifeq ($(CONFIG_USB_HCI), y)
 MODULE_NAME = 8814au
 endif
@@ -1118,16 +1118,6 @@ endif
 
 ifeq ($(CONFIG_MP_VHT_HW_TX_MODE), y)
 EXTRA_CFLAGS += -DCONFIG_MP_VHT_HW_TX_MODE
-ifeq ($(CONFIG_PLATFORM_I386_PC), y)
-## For I386 X86 ToolChain use Hardware FLOATING
-EXTRA_CFLAGS += -mhard-float
-EXTRA_CFLAGS += -DMARK_KERNEL_PFU
-else
-## For ARM ToolChain use Hardware FLOATING
-# Raspbian kernel is with soft-float.
-# 'softfp' allows FP instructions, but no FP on function call interfaces
-EXTRA_CFLAGS += -mfloat-abi=softfp
-endif
 endif
 
 ifeq ($(CONFIG_APPEND_VENDOR_IE_ENABLE), y)
@@ -2171,6 +2161,14 @@ endif
 
 endif
 
+ifeq ($(ARCH), i386)
+EXTRA_CFLAGS += -mhard-float
+EXTRA_CFLAGS += -DMARK_KERNEL_PFU
+else ifeq ($(ARCH), x86_64)
+EXTRA_CFLAGS += -mhard-float
+EXTRA_CFLAGS += -DMARK_KERNEL_PFU
+endif
+
 ########### CUSTOMER ################################
 ifeq ($(CONFIG_CUSTOMER_HUAWEI_GENERAL), y)
 CONFIG_CUSTOMER_HUAWEI = y
@@ -2334,7 +2332,7 @@ config_r:
 	@echo "make config"
 	/bin/bash script/Configure script/config.in
 
-DRIVER_VERSION = $(shell grep "#define DRIVERVERSION" include/rtw_version.h | awk '{print $$3}' | tr -d v\")
+DRIVER_VERSION = $(shell grep "\#define DRIVERVERSION" include/rtw_version.h | awk '{print $$3}' | tr -d v\")
 
 dkms_install:
 	mkdir -p /usr/src/8812au-$(DRIVER_VERSION)
