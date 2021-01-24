@@ -1,28 +1,29 @@
 EXTRA_CFLAGS += $(USER_EXTRA_CFLAGS) -fno-pie
-EXTRA_CFLAGS += -O1
+EXTRA_CFLAGS += -O3
 EXTRA_CFLAGS += -Wno-unused-variable
-EXTRA_CFLAGS += -Wno-unused-value
+#EXTRA_CFLAGS += -Wno-unused-value
 EXTRA_CFLAGS += -Wno-unused-label
-EXTRA_CFLAGS += -Wno-unused-parameter
+#EXTRA_CFLAGS += -Wno-unused-parameter
 EXTRA_CFLAGS += -Wno-unused-function
+EXTRA_CFLAGS += -Wimplicit-fallthrough=0
 #EXTRA_CFLAGS += -Wno-parentheses-equality
 #EXTRA_CFLAGS += -Wno-pointer-bool-conversion
 EXTRA_CFLAGS += -Wno-unknown-pragmas
-EXTRA_CFLAGS += -Wno-unused
+#EXTRA_CFLAGS += -Wno-unused
 EXTRA_CFLAGS += -Wno-vla -g
 
 #GCC_VER_49 := $(shell echo `$(CC) -dumpversion | cut -f1-2 -d.` \>= 4.9 | bc )
 #ifeq ($(GCC_VER_49),1)
-EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
+#EXTRA_CFLAGS += -Wno-date-time	# Fix compile error && warning on gcc 4.9 and later
 #endif
 
 EXTRA_CFLAGS += -I$(src)/include
-EXTRA_LDFLAGS += --strip-debug
+EXTRA_LDFLAGS += --strip-all -O3
 
 ########################## WIFI IC ############################
 CONFIG_RTL8812A = y
 CONFIG_RTL8821A = y
-CONFIG_RTL8814A = y
+CONFIG_RTL8814A = n
 ######################### Interface ###########################
 CONFIG_USB_HCI = y
 ########################### Android ###########################
@@ -177,7 +178,7 @@ ifeq ($(CONFIG_USB_HCI), y)
 HCI_NAME = usb
 endif
 
-ifeq ($(CONFIG_RTL8812A)_$(CONFIG_RTL8821A)_$(CONFIG_RTL8814A), y_y_y)
+ifeq ($(CONFIG_RTL8812A)_$(CONFIG_RTL8821A)_$(CONFIG_RTL8814A), y_y_n)
 
 EXTRA_CFLAGS += -DDRV_NAME=\"rtl88XXau\"
 ifeq ($(CONFIG_USB_HCI), y)
@@ -456,7 +457,7 @@ ifeq ($(CONFIG_RTL8814A), y)
 #EXTRA_CFLAGS += -DCONFIG_MP_VHT_HW_TX_MODE
 CONFIG_MP_VHT_HW_TX_MODE = n
 ##########################################
-RTL871X = rtl8814a
+#RTL871X = rtl8814a
 ifeq ($(CONFIG_USB_HCI), y)
 MODULE_NAME = 8814au
 endif
@@ -1117,16 +1118,6 @@ endif
 
 ifeq ($(CONFIG_MP_VHT_HW_TX_MODE), y)
 EXTRA_CFLAGS += -DCONFIG_MP_VHT_HW_TX_MODE
-ifeq ($(CONFIG_PLATFORM_I386_PC), y)
-## For I386 X86 ToolChain use Hardware FLOATING
-EXTRA_CFLAGS += -mhard-float
-EXTRA_CFLAGS += -DMARK_KERNEL_PFU
-else
-## For ARM ToolChain use Hardware FLOATING
-# Raspbian kernel is with soft-float.
-# 'softfp' allows FP instructions, but no FP on function call interfaces
-EXTRA_CFLAGS += -mfloat-abi=softfp
-endif
 endif
 
 ifeq ($(CONFIG_APPEND_VENDOR_IE_ENABLE), y)
@@ -2170,6 +2161,14 @@ endif
 
 endif
 
+ifeq ($(ARCH), i386)
+EXTRA_CFLAGS += -mhard-float
+EXTRA_CFLAGS += -DMARK_KERNEL_PFU
+else ifeq ($(ARCH), x86_64)
+EXTRA_CFLAGS += -mhard-float
+EXTRA_CFLAGS += -DMARK_KERNEL_PFU
+endif
+
 ########### CUSTOMER ################################
 ifeq ($(CONFIG_CUSTOMER_HUAWEI_GENERAL), y)
 CONFIG_CUSTOMER_HUAWEI = y
@@ -2332,6 +2331,20 @@ endif
 config_r:
 	@echo "make config"
 	/bin/bash script/Configure script/config.in
+
+DRIVER_VERSION = $(shell grep "\#define DRIVERVERSION" include/rtw_version.h | awk '{print $$3}' | tr -d v\")
+
+dkms_install:
+	mkdir -p /usr/src/8812au-$(DRIVER_VERSION)
+	cp -r * /usr/src/8812au-$(DRIVER_VERSION)
+	dkms add -m 8812au -v $(DRIVER_VERSION)
+	dkms build -m 8812au -v $(DRIVER_VERSION)
+	dkms install -m 8812au -v $(DRIVER_VERSION)
+	dkms status
+
+dkms_remove:
+	dkms remove 8812au/$(DRIVER_VERSION) --all
+	rm -rf /usr/src/8812au-$(DRIVER_VERSION)
 
 .PHONY: modules clean
 

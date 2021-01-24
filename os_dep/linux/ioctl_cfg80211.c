@@ -447,7 +447,7 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset,
 	u8 ret = _SUCCESS;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0))
-	struct cfg80211_chan_def chdef;
+	struct cfg80211_chan_def chdef = {};
 
 	ret = rtw_chbw_to_cfg80211_chan_def(wiphy, &chdef, ch, bw, offset, ht);
 	if (ret != _SUCCESS)
@@ -455,7 +455,11 @@ u8 rtw_cfg80211_ch_switch_notify(_adapter *adapter, u8 ch, u8 bw, u8 offset,
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0))
 	if (started) {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0))
+		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0, false);
+#else
 		cfg80211_ch_switch_started_notify(adapter->pnetdev, &chdef, 0);
+#endif
 		goto exit;
 	}
 #endif
@@ -2471,7 +2475,6 @@ static int cfg80211_rtw_change_iface(struct wiphy *wiphy,
 	case NL80211_IFTYPE_P2P_CLIENT:
 		is_p2p = _TRUE;
 	#endif
-	__attribute__ ((__fallthrough__));
 	case NL80211_IFTYPE_STATION:
 		networkType = Ndis802_11Infrastructure;
 
@@ -2496,7 +2499,6 @@ static int cfg80211_rtw_change_iface(struct wiphy *wiphy,
 	case NL80211_IFTYPE_P2P_GO:
 		is_p2p = _TRUE;
 	#endif
-	__attribute__ ((__fallthrough__));
 	case NL80211_IFTYPE_AP:
 		networkType = Ndis802_11APMode;
 
@@ -4448,6 +4450,9 @@ void rtw_cfg80211_indicate_sta_assoc(_adapter *padapter, u8 *pmgmt_frame, uint f
 		sinfo.filled = STATION_INFO_ASSOC_REQ_IES;
 		sinfo.assoc_req_ies = pmgmt_frame + WLAN_HDR_A3_LEN + ie_offset;
 		sinfo.assoc_req_ies_len = frame_len - WLAN_HDR_A3_LEN - ie_offset;
+		#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 18, 0))
+		cfg80211_sinfo_alloc_tid_stats(&sinfo, GFP_KERNEL);
+		#endif
 		cfg80211_new_sta(ndev, get_addr2_ptr(pmgmt_frame), &sinfo, GFP_ATOMIC);
 	}
 #else /* defined(RTW_USE_CFG80211_STA_EVENT) */
@@ -7597,6 +7602,11 @@ exit:
 	return ret;
 }
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0))
+static void cfg80211_rtw_update_mgmt_frame_register(struct wiphy *wiphy,
+                                             struct wireless_dev *wdev,
+                                             struct mgmt_frame_regs *upd)
+#else
 static void cfg80211_rtw_mgmt_frame_register(struct wiphy *wiphy,
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
 	struct wireless_dev *wdev,
@@ -7604,12 +7614,12 @@ static void cfg80211_rtw_mgmt_frame_register(struct wiphy *wiphy,
 	struct net_device *ndev,
 #endif
 	u16 frame_type, bool reg)
+#endif
 {
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 6, 0))
 	struct net_device *ndev = wdev_to_ndev(wdev);
 #endif
 	_adapter *adapter;
-
 	struct rtw_wdev_priv *pwdev_priv;
 
 	if (ndev == NULL)
@@ -7622,31 +7632,6 @@ static void cfg80211_rtw_mgmt_frame_register(struct wiphy *wiphy,
 	RTW_INFO(FUNC_ADPT_FMT" frame_type:%x, reg:%d\n", FUNC_ADPT_ARG(adapter),
 		frame_type, reg);
 #endif
-
-	switch (frame_type) {
-	case IEEE80211_STYPE_AUTH: /* 0x00B0 */
-		if (reg > 0)
-			SET_CFG80211_REPORT_MGMT(pwdev_priv, IEEE80211_STYPE_AUTH, reg);
-		else
-			CLR_CFG80211_REPORT_MGMT(pwdev_priv, IEEE80211_STYPE_AUTH, reg);
-		break;
-#ifdef not_yet
-	case IEEE80211_STYPE_PROBE_REQ: /* 0x0040 */
-		if (reg > 0)
-			SET_CFG80211_REPORT_MGMT(pwdev_priv, IEEE80211_STYPE_PROBE_REQ, reg);
-		else
-			CLR_CFG80211_REPORT_MGMT(pwdev_priv, IEEE80211_STYPE_PROBE_REQ, reg);
-		break;
-	case IEEE80211_STYPE_ACTION: /* 0x00D0 */
-		if (reg > 0)
-			SET_CFG80211_REPORT_MGMT(pwdev_priv, IEEE80211_STYPE_ACTION, reg);
-		else
-			CLR_CFG80211_REPORT_MGMT(pwdev_priv, IEEE80211_STYPE_ACTION, reg);
-		break;
-#endif
-	default:
-		break;
-	}
 
 exit:
 	return;
@@ -10069,7 +10054,11 @@ static struct cfg80211_ops rtw_cfg80211_ops = {
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 37)) || defined(COMPAT_KERNEL_RELEASE)
 	.mgmt_tx = cfg80211_rtw_mgmt_tx,
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5,8,0))
+	.update_mgmt_frame_registrations = cfg80211_rtw_update_mgmt_frame_register,
+#else
 	.mgmt_frame_register = cfg80211_rtw_mgmt_frame_register,
+#endif
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 34) && LINUX_VERSION_CODE <= KERNEL_VERSION(2, 6, 35))
 	.action = cfg80211_rtw_mgmt_tx,
 #endif
